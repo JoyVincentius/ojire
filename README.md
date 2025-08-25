@@ -47,7 +47,8 @@ go run .
 
 ### Project Disclaimers
 
-* Stock only reduced when checkout
+* Soal 1 & Soal 2 will be executed when running project
+* For simple app, Stock only reduced when checkout
 * All orders status is "pending"
 * I've created postman collection, be sure to import it
 * If you found any issue, please don't be shy to contact me.
