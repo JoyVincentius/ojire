@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"sort"
 	"strings"
 
 	"ojire/db"
@@ -91,6 +92,7 @@ type Answer struct {
 	Containers            map[FruitType][]string `json:"containers_by_type"`
 	ContainerCount        int                    `json:"container_count"`
 	TotalStockByContainer map[FruitType]int      `json:"total_stock_by_type"`
+	Duplicates            []string               `json:"duplicates"`
 	Comment               string                 `json:"comment"`
 }
 
@@ -103,7 +105,12 @@ func solve(fruits []Fruit) Answer {
 
 	containers := make(map[FruitType][]string)
 	for _, f := range fruits {
-		containers[f.Type] = append(containers[f.Type], f.Name)
+		lcName := strings.ToLower(f.Name)
+		containers[f.Type] = append(containers[f.Type], lcName)
+	}
+
+	for t, list := range containers {
+		containers[t] = uniqueStrings(list)
 	}
 
 	totalStock := make(map[FruitType]int)
@@ -111,18 +118,32 @@ func solve(fruits []Fruit) Answer {
 		totalStock[f.Type] += f.Stock
 	}
 
-	comment := generateComment(names, containers, totalStock)
+	dupMap := make(map[string]int)
+	for _, f := range fruits {
+		lc := strings.ToLower(f.Name)
+		dupMap[lc]++
+	}
+	var duplicates []string
+	for name, cnt := range dupMap {
+		if cnt > 1 {
+			duplicates = append(duplicates, name) 
+		}
+	}
+	duplicates = uniqueStrings(duplicates)
+
+	comment := generateComment(names, containers, totalStock, duplicates)
 
 	return Answer{
 		AllFruitNames:         names,
 		Containers:            containers,
 		ContainerCount:        len(containers),
 		TotalStockByContainer: totalStock,
+		Duplicates:            duplicates,
 		Comment:               comment,
 	}
 }
 
-func generateComment(names []string, cont map[FruitType][]string, stock map[FruitType]int) string {
+func generateComment(names []string, cont map[FruitType][]string, stock map[FruitType]int, dup []string) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "Andi memiliki %d jenis buah (%s). ", len(names), strings.Join(names, ", "))
 	fmt.Fprintf(&b, "Buahnya terbagi menjadi %d wadah berdasarkan tipe: ", len(cont))
@@ -134,7 +155,11 @@ func generateComment(names []string, cont map[FruitType][]string, stock map[Frui
 	for t, s := range stock {
 		fmt.Fprintf(&b, "Total stok untuk tipe %s adalah %d. ", t, s)
 	}
-	b.WriteString("Tidak ada duplikasi tipe wadah yang diperlukan; hanya dua wadah (IMPORT & LOCAL) cukup.")
+	if len(dup) > 0 {
+		fmt.Fprintf(&b, "Terdapat duplikasi nama buah: %s. ", strings.Join(dup, ", "))
+	} else {
+		b.WriteString("Tidak ada duplikasi nama buah. ")
+	}
 	return b.String()
 }
 
@@ -223,6 +248,25 @@ func main() {
 
 	total := hitungKomentar(comments)
 	fmt.Printf("Total komentar (termasuk semua balasan): %d\n", total)
+
+	fmt.Println("\n=== Soal tambahan ===")
+	a := []int{3, 4, 2, 1, 3, 3}
+	b := []int{4, 3, 5, 3, 9, 3}
+
+	sort.Ints(a)
+	sort.Ints(b)
+
+	totalSelisih := 0
+	for i := 0; i < len(a); i++ {
+		selisih := a[i] - b[i]
+		if selisih < 0 {
+			selisih = -selisih
+		}
+		totalSelisih += selisih
+		fmt.Printf("a: %d (kiri) - b: %d (kanan) - selisih = %d\n", a[i], b[i], selisih)
+	}
+
+	fmt.Printf("\nTotal selisih: %d\n", totalSelisih)
 
 	db.Init()
 
